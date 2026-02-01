@@ -279,7 +279,12 @@ export default function VoiceAgentPage() {
             const payload = await response.json();
             if (payload?.error) message = payload.error;
           } catch (_) {
-            // ignore json parse errors
+            // fallback: try to read text response (e.g. 500 HTML)
+            const text = await response.text().catch(() => null);
+            if (text) {
+              // Truncate if too long (e.g. huge HTML error page)
+              message = text.length > 200 ? text.slice(0, 200) + "..." : text;
+            }
           }
           throw new Error(message);
         }
@@ -288,11 +293,7 @@ export default function VoiceAgentPage() {
         try {
           payload = await response.json();
         } catch (jsonError) {
-          const fallbackText = await response.text();
-          if (fallbackText) {
-            throw new Error(fallbackText);
-          }
-          throw jsonError;
+          throw new Error("Invalid response from server. Check console for details.");
         }
         const apiTemplate = payload?.template || {};
         const sanitizedInitial = apiTemplate.initialSentence?.toString().trim();

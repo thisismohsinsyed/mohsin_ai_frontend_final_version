@@ -126,24 +126,44 @@ async function runAiSafely(scriptText, referencePrompt) {
 
 async function extractTextWithPdfJs(buffer) {
   try {
+    // Dynamic import to avoid build-time issues if worker is missing
     const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    
+    // Disable worker for server-side usage
     if (pdfjsLib.GlobalWorkerOptions) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = undefined;
     }
-    const loadingTask = pdfjsLib.getDocument({ data: buffer });
+
+    // Load the document with strict error handling
+    const loadingTask = pdfjsLib.getDocument({ 
+      data: buffer,
+      verbosiry: 0,
+      stopAtErrors: true
+    });
+    
     const pdf = await loadingTask.promise;
     const chunks = [];
+    
+    // Extract text from each page
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-      const page = await pdf.getPage(pageNumber);
-      const content = await page.getTextContent();
-      const pageText = content.items.map((item) => item.str).join(" ");
-      chunks.push(pageText);
+      try {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item) => item.str).join(" ");
+        chunks.push(pageText);
+      } catch (pageError) {
+        console.warn(`Failed to extract text from page ${pageNumber}`, pageError);
+      }
     }
-    await pdf.cleanup();
-    await pdf.destroy();
+    
+    // Clean up
+    if (pdf.cleanup) await pdf.cleanup();
+    if (pdf.destroy) await pdf.destroy();
+    
     return chunks.join("\n").trim();
   } catch (error) {
-    console.error("PDF.js fallback failed", error);
+    console.error("PDF.js critical failure:", error);
+    // Do not throw, return empty string to allow fallback to metadata
     return "";
   }
 }
@@ -186,6 +206,7 @@ export async function POST(req) {
     }
 
     if (!scriptText) {
+      console.log("No text extracted from PDF, using metadata fallback.");
       scriptText = buildMetadataFallback({
         notes: notes || undefined,
         templateLabel: templateName || undefined,
