@@ -1,0 +1,9 @@
+
+### Get class
+POST http://localhost:3000/api/classification
+Content-Type: application/json
+
+{
+   "text": "This is a test sentence"
+}
+

@@ -1,0 +1,10 @@
+# Root .gitignore
+node_modules/
+.env
+.DS_Store
+*.log
+
+# Ignore client and server node_modules individually if needed
+client/node_modules/
+server/node_modules/
+server/uploads/*
