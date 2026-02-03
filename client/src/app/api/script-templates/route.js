@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { prisma } from "@/lib/prisma";
@@ -104,7 +105,7 @@ function buildMetadataFallback({ notes, templateLabel, fileName }) {
 
 function buildFallback(scriptText, referencePrompt) {
 
-  const normalized = scriptText.replace(/\s+/g, " " ).trim();
+  const normalized = scriptText.replace(/\s+/g, " ").trim();
 
   const fallbackAddendum = "Align to this script summary: " + normalized.slice(0, 600) + "... Keep responses confident, procedural, and compliant.";
 
@@ -128,22 +129,22 @@ async function extractTextWithPdfJs(buffer) {
   try {
     // Dynamic import to avoid build-time issues if worker is missing
     const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    
+
     // Disable worker for server-side usage
     if (pdfjsLib.GlobalWorkerOptions) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = undefined;
     }
 
     // Load the document with strict error handling
-    const loadingTask = pdfjsLib.getDocument({ 
+    const loadingTask = pdfjsLib.getDocument({
       data: buffer,
       verbosiry: 0,
       stopAtErrors: true
     });
-    
+
     const pdf = await loadingTask.promise;
     const chunks = [];
-    
+
     // Extract text from each page
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
       try {
@@ -155,11 +156,11 @@ async function extractTextWithPdfJs(buffer) {
         console.warn(`Failed to extract text from page ${pageNumber}`, pageError);
       }
     }
-    
+
     // Clean up
     if (pdf.cleanup) await pdf.cleanup();
     if (pdf.destroy) await pdf.destroy();
-    
+
     return chunks.join("\n").trim();
   } catch (error) {
     console.error("PDF.js critical failure:", error);
@@ -187,26 +188,52 @@ export async function POST(req) {
     const notes = (formData.get("notes") || "").toString().trim();
 
     if (!file || typeof file === "string") {
-      return NextResponse.json({ error: "A PDF file is required." }, { status: 400 });
+      return NextResponse.json({ error: "A file is required." }, { status: 400 });
     }
 
-    if (!file.name?.toLowerCase().endsWith(".pdf")) {
-      return NextResponse.json({ error: "Only PDF files are supported right now." }, { status: 400 });
+    const lowerName = file.name?.toLowerCase() || "";
+    if (
+      !lowerName.endsWith(".pdf") &&
+      !lowerName.endsWith(".txt") &&
+      !lowerName.endsWith(".md") &&
+      !lowerName.endsWith(".docx")
+    ) {
+      return NextResponse.json(
+        { error: "Only .txt, .md, .docx, and .pdf files are supported." },
+        { status: 400 }
+      );
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: "File is too large. Maximum allowed size is 8MB." }, { status: 400 });
+      return NextResponse.json(
+        { error: "File is too large. Maximum allowed size is 8MB." },
+        { status: 400 }
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    let scriptText = await extractScriptText(buffer);
+    let scriptText = "";
+
+    if (lowerName.endsWith(".pdf")) {
+      scriptText = await extractScriptText(buffer);
+    } else if (lowerName.endsWith(".docx")) {
+      try {
+        const { value } = await mammoth.extractRawText({ buffer });
+        scriptText = value;
+      } catch (err) {
+        console.error("DOCX extraction failed", err);
+      }
+    } else {
+      // txt, md
+      scriptText = buffer.toString("utf-8");
+    }
 
     if (scriptText) {
       scriptText = scriptText.trim();
     }
 
     if (!scriptText) {
-      console.log("No text extracted from PDF, using metadata fallback.");
+      console.log("No text extracted from file, using metadata fallback.");
       scriptText = buildMetadataFallback({
         notes: notes || undefined,
         templateLabel: templateName || undefined,

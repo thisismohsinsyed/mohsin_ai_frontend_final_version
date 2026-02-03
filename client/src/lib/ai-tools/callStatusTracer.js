@@ -3,7 +3,7 @@ import { google } from "@ai-sdk/google";
 import { CALL_STAGE_BLUEPRINT } from "@/data/callStages";
 import { z } from "zod";
 
-const CALL_TRACE_MODEL = process.env.CALL_TRACE_MODEL || "gemini-2.0-flash";
+const CALL_TRACE_MODEL = process.env.CALL_TRACE_MODEL || "gemini-1.5-pro";
 const MAX_TRACE_TEXT = 10000;
 
 export const STATUS_VALUES = ["pass", "warning", "fail", "info"];
@@ -44,7 +44,7 @@ function buildPrompt(scriptText, metadata) {
     ? `Context to consider:\n${metadata.trim()}\n\n`
     : "";
 
-  return `You are auditing a Summit Tax Relief outbound call script. Use the stage blueprint below to determine how well the script covers each mandatory stage and whether the call should advance, clarify, repeat the greeting, or terminate.\n\n${metadataBlock}Stage blueprint:\n${stageDoc}\n\nRules:\n- Always return an entry for every stage, even if the script never mentions it.\n- Status meanings: pass = fully covered, warning = partially covered/missing details, fail = stage missing or the flow is unsafe, info = neutral placeholder.\n- recommendedAction must be one of: advance, clarify, terminate, repeat_greeting.\n- If the script contains abusive, hostile, honeypot, or trap intent, mark the affected stage as fail, recommendedAction = terminate, and include "abuse_or_honeypot" in flags.\n- If the script contains nonsense such as the literal phrase "banana banana" or other gibberish intent, treat it as a nonsense greeting and set Stage S1 recommendedAction = repeat_greeting with a warning.\n- Never recommend or reference CALLBACK_SCHEDULED or callbacks; either advance, clarify, repeat the greeting, or terminate.\n- Never output bracketed annotations such as [DISPOSITION: ...]; describe dispositions in natural language.\n- Be concise but specific in the reason for each stage and describe what intent you detected.\n- nextStep should describe what happens after following the recommended action.\n- summary should mention if the call should stop early.\n\nReturn valid JSON that matches the provided schema.\n\nScript to analyze (truncated if long):\n"""${scriptText}"""`;
+  return `Stage blueprint:\n${stageDoc}`;
 }
 
 function normalizeStage(resultStage) {
@@ -166,11 +166,24 @@ export async function traceCallStatus(scriptText, metadata = {}) {
 
   try {
     const { object } = await generateObject({
-      model: google(CALL_TRACE_MODEL),
+      model: google("gemini-2.0-flash"),
       schema: callTraceSchema,
-      prompt: buildPrompt(truncated, metadataParts.join("\n")),
-      temperature: 0.2,
-      maxOutputTokens: 800,
+      prompt: `TASK: Extract compliance status for the call script below.
+${metadataParts.join("\n")}
+
+STAGES TO VERIFY:
+${buildPrompt(truncated, "").replace(/Stage blueprint:\n/, "")}
+
+INSTRUCTIONS:
+1. For each stage, check if the script matches the intent.
+2. Return JSON.
+3. Keep summaries under 10 words.
+4. NO REPETITION.
+
+Script:
+"""${truncated}"""`,
+      temperature: 0.0,
+      maxOutputTokens: 8192,
     });
 
     return normalizeCallTrace(object);

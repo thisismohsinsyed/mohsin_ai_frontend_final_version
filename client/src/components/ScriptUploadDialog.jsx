@@ -30,14 +30,14 @@ export default function ScriptUploadDialog({
     }
   }, [open]);
 
-  const derivedName = name.trim() || (file?.name?.replace(/\.pdf$/i, "") ?? "");
+  const derivedName = name.trim() || (file?.name?.replace(/\.(pdf|txt|md|docx)$/i, "") ?? "");
   const disableSubmit = !file || isUploading;
 
   const handleFileChange = (event) => {
     const selected = event.target.files?.[0];
     setFile(selected || null);
     if (selected && !name.trim()) {
-      setName(selected.name.replace(/\.pdf$/i, ""));
+      setName(selected.name.replace(/\.(pdf|txt|md|docx)$/i, ""));
     }
   };
 
@@ -65,13 +65,13 @@ export default function ScriptUploadDialog({
             <Input
               id="script-file"
               type="file"
-              accept="application/pdf,.pdf"
+              accept=".txt,.md,.docx,.pdf"
               onChange={handleFileChange}
               disabled={isUploading}
               required
             />
             <p className="text-xs text-muted-foreground">
-              PDF only. Keep the document under 8MB for the best results.
+              Supports .txt, .md, and .docx. Keep under 8MB.
             </p>
           </div>
 

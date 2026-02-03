@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
   Users
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import VoiceChat from "@/components/VoiceChat";
@@ -245,12 +246,60 @@ export default function VoiceAgentPage() {
     [allTemplates, setContextInitialSentence, setContextSystemPrompt, setGlobalSystemPrompt, setModel]
   );
 
-  const applySettings = useCallback(() => {
+  const applySettings = useCallback(async () => {
+    // 1. Apply to current session context immediately
     setContextInitialSentence(draftInitialSentence);
     setContextSystemPrompt(draftSystemPrompt);
     setGlobalSystemPrompt(draftSystemPrompt);
     setModel("mistral-7b-instruct-v0.3");
-  }, [draftInitialSentence, draftSystemPrompt, setContextInitialSentence, setContextSystemPrompt, setGlobalSystemPrompt, setModel]);
+
+    // 2. If it's a custom template, persist changes to backend
+    const customTemplate = customTemplates.find((t) => t.id === selectedPersonaId);
+
+    if (customTemplate) {
+      const toastId = toast.loading("Saving changes to database...");
+      try {
+        const response = await fetch(`/api/templates/${selectedPersonaId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            initialSentence: draftInitialSentence,
+            systemPrompt: draftSystemPrompt,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to save template changes.");
+        }
+
+        const payload = await response.json();
+        const updated = normalizeTemplate(payload.template);
+        if (updated) {
+          setCustomTemplates((prev) =>
+            prev.map((t) => (t.id === updated.id ? updated : t))
+          );
+        }
+
+        toast.success("Template saved & session updated.", { id: toastId });
+      } catch (error) {
+        console.error("Apply save failed", error);
+        toast.error("Session updated, but failed to save to database.", { id: toastId });
+      }
+    } else {
+      // System template (read-only)
+      toast.success("Applied to session (System templates are read-only).");
+    }
+  }, [
+    draftInitialSentence,
+    draftSystemPrompt,
+    setContextInitialSentence,
+    setContextSystemPrompt,
+    setGlobalSystemPrompt,
+    setModel,
+    selectedPersonaId,
+    customTemplates,
+    normalizeTemplate
+  ]);
 
   const resetSettings = useCallback(() => {
     setDraftInitialSentence(selectedTemplate.initialSentence);

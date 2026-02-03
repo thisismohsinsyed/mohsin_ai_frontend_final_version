@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(req, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     if (!id) {
       return NextResponse.json({ error: "Template id is required." }, { status: 400 });
     }
@@ -42,7 +42,7 @@ export async function PATCH(req, { params }) {
 
 export async function DELETE(req, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     if (!id) {
       return NextResponse.json({ error: "Template id is required." }, { status: 400 });
     }
@@ -51,7 +51,8 @@ export async function DELETE(req, { params }) {
     return NextResponse.json({ id });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-      return NextResponse.json({ error: "Template not found." }, { status: 404 });
+      // Idempotency: If it's already gone, consider it a success.
+      return NextResponse.json({ id, status: "already_deleted" });
     }
     console.error("Failed to delete template", error);
     return NextResponse.json({ error: "Unable to delete template." }, { status: 500 });

@@ -5,6 +5,7 @@ import { PromptsettingProvider } from "@/contexts/Promptsetting";
 import { SystemSettingsProvider } from "@/contexts/SystemSettingsContext";
 import { ASRProvider } from "@/contexts/ASRContext";
 import { AudioProvider } from "@/contexts/AudioContext";
+import { Toaster } from "@/components/ui/sonner";
 
 const Providers = ({ children }) => {
   return (
@@ -13,6 +14,7 @@ const Providers = ({ children }) => {
         <SystemSettingsProvider>
           <PromptsettingProvider>
             {children}
+            <Toaster />
           </PromptsettingProvider>
         </SystemSettingsProvider>
       </ASRProvider>
