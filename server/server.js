@@ -32,6 +32,21 @@ nextApp.prepare().then(() => {
   app.use(express.urlencoded({ limit: "50mb", extended: false }));
   app.use(cors({ origin: true, credentials: true }));
 
+  // Serve Next.js static files with proper MIME types
+  app.use('/_next/static', express.static(path.join(clientDir, '.next/static'), {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      } else if (filePath.endsWith('.woff2')) {
+        res.setHeader('Content-Type', 'font/woff2');
+      } else if (filePath.endsWith('.woff')) {
+        res.setHeader('Content-Type', 'font/woff');
+      }
+    }
+  }));
+
   const uploadsDir = path.join(process.cwd(), "uploads");
   app.use("/uploads", express.static(uploadsDir));
 
