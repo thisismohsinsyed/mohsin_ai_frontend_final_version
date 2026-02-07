@@ -6,13 +6,16 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export async function PATCH(req, { params }) {
+  console.log("PATCH /api/templates/[id] - Starting...");
   try {
     const { id } = await params;
+    console.log("PATCH /api/templates/[id] - Template ID:", id);
     if (!id) {
       return NextResponse.json({ error: "Template id is required." }, { status: 400 });
     }
 
     const body = await req.json();
+    console.log("PATCH /api/templates/[id] - Request body:", JSON.stringify(body).slice(0, 200));
     const updates = {};
     ["label", "initialSentence", "systemPrompt", "description", "notes"].forEach((field) => {
       if (field in body && body[field] !== undefined) {
@@ -25,10 +28,12 @@ export async function PATCH(req, { params }) {
       return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
     }
 
+    console.log("PATCH /api/templates/[id] - Updating database...");
     const updated = await prisma.scriptTemplate.update({
       where: { id },
       data: updates,
     });
+    console.log("PATCH /api/templates/[id] - Database updated successfully");
 
     return NextResponse.json({ template: updated });
   } catch (error) {

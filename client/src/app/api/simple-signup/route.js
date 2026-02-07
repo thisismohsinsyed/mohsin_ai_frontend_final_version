@@ -1,3 +1,6 @@
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { clerkClient } from "@clerk/nextjs/server";
 
@@ -15,7 +18,8 @@ export async function POST(request) {
       return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
     }
 
-    const user = await clerkClient.users.createUser({
+    const client = await clerkClient();
+    const user = await client.users.createUser({
       email_address: [email],
       password,
       first_name: firstName,

@@ -124,7 +124,8 @@ export default function RecordAudio() {
       const formData = new FormData();
       formData.append("audios", clip.blob, clip.name);
 
-      const res = await fetch("https://callcenterprofessionals.info/api/audio/upload", {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://callcenterprofessionals.info";
+      const res = await fetch(`${backendUrl}/api/audio/upload`, {
         method: "POST",
         body: formData,
       });

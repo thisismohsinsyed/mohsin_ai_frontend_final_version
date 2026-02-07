@@ -16,8 +16,9 @@ export default function AudioLibrary() {
   const deleteFile = async (filename) => {
     if (!confirm(`Delete "${filename}"?`)) return;
     try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://callcenterprofessionals.info";
       const res = await fetch(
-        `https://callcenterprofessionals.info/api/audio/delete?file=${encodeURIComponent(
+        `${backendUrl}/api/audio/delete?file=${encodeURIComponent(
           filename
         )}`,
         { method: "DELETE" }

@@ -6,8 +6,8 @@ import OpenAI from "openai";
 
 // ✅ Higgs Audio / vLLM-compatible API
 const client = new OpenAI({
-  apiKey: process.env.HIGGS_API_KEY || "YOUR_API_KEY",
-  baseURL: "http://173.208.243.146:7000/v1", // keep HTTP (safe via server)
+  apiKey: "EMPTY",
+  baseURL: "http://173.208.243.146:7000/v1",
 });
 
 export async function POST(req) {

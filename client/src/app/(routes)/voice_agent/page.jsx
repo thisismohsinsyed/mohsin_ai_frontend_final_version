@@ -255,24 +255,36 @@ export default function VoiceAgentPage() {
 
     // 2. If it's a custom template, persist changes to backend
     const customTemplate = customTemplates.find((t) => t.id === selectedPersonaId);
+    console.log("[applySettings] selectedPersonaId:", selectedPersonaId);
+    console.log("[applySettings] customTemplate found:", !!customTemplate);
 
     if (customTemplate) {
       const toastId = toast.loading("Saving changes to database...");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       try {
-        const response = await fetch(`/api/templates/${selectedPersonaId}`, {
-          method: "PATCH",
+        console.log("[applySettings] Sending POST to /api/templates/update for ID: " + selectedPersonaId);
+        const response = await fetch(`/api/templates/update`, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            id: selectedPersonaId,
             initialSentence: draftInitialSentence,
             systemPrompt: draftSystemPrompt,
           }),
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
+        console.log("[applySettings] Response status:", response.status);
 
         if (!response.ok) {
           throw new Error("Failed to save template changes.");
         }
 
         const payload = await response.json();
+        console.log("[applySettings] Response payload received");
         const updated = normalizeTemplate(payload.template);
         if (updated) {
           setCustomTemplates((prev) =>
@@ -282,8 +294,13 @@ export default function VoiceAgentPage() {
 
         toast.success("Template saved & session updated.", { id: toastId });
       } catch (error) {
+        clearTimeout(timeoutId);
         console.error("Apply save failed", error);
-        toast.error("Session updated, but failed to save to database.", { id: toastId });
+        if (error.name === 'AbortError') {
+          toast.error("Request timed out. Please check your connection.", { id: toastId });
+        } else {
+          toast.error("Session updated, but failed to save to database.", { id: toastId });
+        }
       }
     } else {
       // System template (read-only)

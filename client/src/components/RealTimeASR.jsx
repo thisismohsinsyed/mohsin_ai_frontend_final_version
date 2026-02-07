@@ -384,7 +384,8 @@ export default function RealTimeASR({ onTranscriptionChunk, onBotResponse }) {
     if (initialSentence) params.set("initialSentence", initialSentence);
     if (systemPrompt) params.set("systemPrompt", systemPrompt);
     const queryString = params.toString();
-    const wsUrl = `wss://callcenterprofessionals.info/ws/${uuidv4()}/${uuidv4()}/init/sessionstart${
+    const wsBase = process.env.NEXT_PUBLIC_WS_URL || "wss://callcenterprofessionals.info";
+    const wsUrl = `${wsBase}/ws/${uuidv4()}/${uuidv4()}/init/sessionstart${
       queryString ? `?${queryString}` : ""
     }`;
 

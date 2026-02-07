@@ -11,11 +11,15 @@ import { errorHandler } from "./middleware/errorMiddleware.js";
 import ASRStreamSession from "./services/speech_to_text/speecth_to_text.js";
 import llmRoutes from "./routes/llmRoute.js";
 import audioRoutes from "./routes/audioRoute.js";
+import templateRoutes from "./routes/templateRoute.js";
 
 dotenv.config();
 
-const dev = process.env.NODE_ENV !== 'production';
-const nextApp = next({ dev, dir: "../client" });
+const dev = (process.env.NODE_ENV || '').trim() !== 'production';
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDir = path.resolve(__dirname, '../client');
+const nextApp = next({ dev, dir: clientDir });
 const handle = nextApp.getRequestHandler();
 
 const port = 3000;
@@ -34,8 +38,15 @@ nextApp.prepare().then(() => {
   app.use("/api/llm", llmRoutes);
   app.use("/api/audio", audioRoutes);
   app.use("/api/voice-clone", voiceCloneRoute);
+  app.use("/api/templates", templateRoutes);  // Express-handled template routes
 
   app.use(errorHandler);
+
+  // Log all requests to trace routing issues
+  app.use((req, res, next) => {
+    console.log(`[Express] ${req.method} ${req.url}`);
+    next();
+  });
 
   app.all(/.*/, (req, res) => handle(req, res));
 

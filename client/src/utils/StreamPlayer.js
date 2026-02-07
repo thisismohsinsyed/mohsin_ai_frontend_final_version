@@ -1,3 +1,5 @@
+"use client";
+
 export class StreamPlayer {
     constructor(sampleRate = 16000, options = {}) {
         this.sampleRate = sampleRate;

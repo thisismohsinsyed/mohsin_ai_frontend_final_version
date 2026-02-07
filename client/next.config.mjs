@@ -1,16 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
-    modularizeImports: {
-        "lucide-react": {
-            transform: "lucide-react/dist/esm/icons/{{member}}",
-        },
+    experimental: {
+        optimizePackageImports: ["lucide-react"],
     },
     async rewrites() {
         return [
             {
-                source: '/api/proxy/audio/upload',
-                destination: 'https://callcenterprofessionals.info/api/audio/upload',
+                source: '/api/proxy/audio/:path*',
+                destination: `${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://callcenterprofessionals.info'}/api/audio/:path*`,
             },
         ];
     },
