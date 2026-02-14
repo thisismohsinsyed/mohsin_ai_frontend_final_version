@@ -55,15 +55,10 @@ nextApp.prepare().then(() => {
   app.use("/api/voice-clone", voiceCloneRoute);
   app.use("/api/templates", templateRoutes);  // Express-handled template routes
 
-  app.use(errorHandler);
-
-  // Log all requests to trace routing issues
-  app.use((req, res, next) => {
-    console.log(`[Express] ${req.method} ${req.url}`);
-    next();
-  });
-
   app.all(/.*/, (req, res) => handle(req, res));
+
+  // Error handler must be registered LAST
+  app.use(errorHandler);
 
   const server = app.listen(port, host, () => {
     console.log(`Server is listening at http://${host}:${port}`);
@@ -71,7 +66,7 @@ nextApp.prepare().then(() => {
 
   const wss = new WebSocketServer({ server });
   wss.on("connection", (ws, req) => {
-    console.log("New WebSocket connection");
+
 
     const { pathname, query } = url.parse(req.url, true);
     const parts = pathname.split("/").filter(Boolean);
@@ -82,18 +77,6 @@ nextApp.prepare().then(() => {
     const systemPrompt = query.systemPrompt ? decodeURIComponent(query.systemPrompt) : null;
     const initialSentence = query.initialSentence ? decodeURIComponent(query.initialSentence) : null;
 
-    if (audioUrl) {
-      console.log("Selected reference audio:", audioUrl);
-    } else {
-      console.log("No reference audio provided.");
-    }
-
-    if (systemPrompt) {
-      console.log("Received system prompt (truncated):", systemPrompt.slice(0, 80));
-    }
-    if (initialSentence) {
-      console.log("Initial sentence:", initialSentence);
-    }
 
     const promptSettings = { systemPrompt, initialSentence };
     const session = new ASRStreamSession(uuid, caller, audioUrl, promptSettings);

@@ -138,7 +138,7 @@ async function extractTextWithPdfJs(buffer) {
     // Load the document with strict error handling
     const loadingTask = pdfjsLib.getDocument({
       data: buffer,
-      verbosiry: 0,
+      verbosity: 0,
       stopAtErrors: true
     });
 

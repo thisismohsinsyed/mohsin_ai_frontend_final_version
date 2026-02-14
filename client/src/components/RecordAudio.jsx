@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, UploadCloud, Trash2, Loader2 } from "lucide-react";
 import { audioBufferToWav, generateAudioFileName } from "@/lib/utils";
@@ -50,6 +50,16 @@ export default function RecordAudio() {
     }
   };
 
+  // Bug 5 fix: Clean up timer and MediaRecorder on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
   const toggleRecording = async () => {
     if (isRecording) {
       mediaRecorderRef.current.stop();
@@ -61,7 +71,13 @@ export default function RecordAudio() {
     // ✅ Show a random sentence before starting
     setPromptText(generatePrompt());
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      setWarning("Microphone access denied or unavailable.");
+      return;
+    }
     mediaRecorderRef.current = new MediaRecorder(stream);
     audioChunksRef.current = [];
 
@@ -132,7 +148,7 @@ export default function RecordAudio() {
 
       if (!res.ok) throw new Error(`Server responded ${res.status}`);
       const data = await res.json();
-      console.log("✅ Upload response:", data);
+
 
       // ✅ Update global context so other pages refresh automatically
       addAudio(clip.name);
@@ -150,6 +166,8 @@ export default function RecordAudio() {
   };
 
   const deleteClip = () => {
+    // Bug 4 fix: Revoke object URL to prevent memory leak
+    if (clip?.url) URL.revokeObjectURL(clip.url);
     setClip(null);
     setWarning("");
     setRecordTime(0);
@@ -171,9 +189,8 @@ export default function RecordAudio() {
       <Button
         onClick={toggleRecording}
         size="lg"
-        className={`flex items-center gap-3 text-white px-6 py-3 rounded-full shadow-md transition-all ${
-          isRecording ? "bg-rose-600 animate-pulse" : "bg-black hover:bg-gray-800"
-        }`}
+        className={`flex items-center gap-3 text-white px-6 py-3 rounded-full shadow-md transition-all ${isRecording ? "bg-rose-600 animate-pulse" : "bg-black hover:bg-gray-800"
+          }`}
       >
         <Mic className="w-5 h-5" />
         {isRecording ? "Stop Recording" : "Start Recording"}

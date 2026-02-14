@@ -42,7 +42,7 @@ export default function UploadAudio() {
     try {
       const duration = await getDuration(f);
       if (duration < 9 || duration > 20) {
-        setWarning("Duration must be betweeen 9 and 20 seconds.");
+        setWarning("Duration must be between 9 and 20 seconds.");
         return;
       }
       // Success
@@ -117,10 +117,12 @@ export default function UploadAudio() {
       if (!res.ok) throw new Error(`Server responded ${res.status}`);
 
       const data = await res.json();
-      console.log("✅ Upload response:", data);
+
       addAudio(wavName);
 
       setMsg("success"); // special flag for UI
+      // Revoke object URL before clearing
+      if (file?.url) URL.revokeObjectURL(file.url);
       setFile(null);
       setTimeout(() => setMsg(""), 3000);
     } catch (err) {
@@ -132,6 +134,8 @@ export default function UploadAudio() {
   };
 
   const clearFile = () => {
+    // Bug 4 fix: Revoke object URL to prevent memory leak
+    if (file?.url) URL.revokeObjectURL(file.url);
     setFile(null);
     setWarning("");
   };

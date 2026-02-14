@@ -57,9 +57,9 @@ export default function AudioLibrary() {
             No audio files found.
           </p>
         ) : (
-          audios.map((f, i) => (
+          audios.map((f) => (
             <div
-              key={i}
+              key={f.name}
               className="flex items-center justify-between border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 px-3 py-2 transition-all"
             >
               {/* File info */}

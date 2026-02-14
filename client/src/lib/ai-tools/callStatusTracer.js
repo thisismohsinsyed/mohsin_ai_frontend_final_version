@@ -44,7 +44,7 @@ function buildPrompt(scriptText, metadata) {
     ? `Context to consider:\n${metadata.trim()}\n\n`
     : "";
 
-  return `Stage blueprint:\n${stageDoc}`;
+  return `${metadataBlock}Stage blueprint:\n${stageDoc}`;
 }
 
 function normalizeStage(resultStage) {

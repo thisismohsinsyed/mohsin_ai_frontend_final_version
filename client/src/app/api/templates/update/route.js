@@ -8,12 +8,12 @@ import { prisma } from "@/lib/prisma";
 // POST /api/templates/update - Alternative to PATCH /api/templates/[id]
 // Used as a workaround for Next.js 15 dynamic route issues with custom Express server
 export async function POST(req) {
-    console.log("POST /api/templates/update - Starting...");
+
     try {
         const body = await req.json();
         const { id, ...updateData } = body;
 
-        console.log("POST /api/templates/update - Template ID:", id);
+
 
         if (!id) {
             return NextResponse.json({ error: "Template id is required." }, { status: 400 });
@@ -31,12 +31,12 @@ export async function POST(req) {
             return NextResponse.json({ error: "No valid fields to update." }, { status: 400 });
         }
 
-        console.log("POST /api/templates/update - Updating database...");
+
         const updated = await prisma.scriptTemplate.update({
             where: { id },
             data: updates,
         });
-        console.log("POST /api/templates/update - Database updated successfully");
+
 
         return NextResponse.json({ template: updated });
     } catch (error) {

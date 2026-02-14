@@ -40,23 +40,23 @@ export const uploadAudios = asyncHandler(async (req, res) => {
   const BASE_UPLOAD_URL = `${protocol}://${host}/uploads`;
 
   for (const file of req.files) {
-    console.log(`🎧 Processing file: ${file.originalname}`);
+
 
     try {
       // ✅ Construct file URLs
       const fileUrl = `${BASE_UPLOAD_URL}/${encodeURIComponent(file.originalname)}`;
       const filePath = path.join(process.cwd(), "uploads", file.originalname);
-      console.log(fileUrl, filePath)
+
 
       // 🔥 Call Triton model
       const { voices, transcription } = await tritonClient.infer(fileUrl);
-      console.log(voices, transcription)
+
 
       // 📝 Save transcription into .txt file beside the audio
       const txtPath = `${filePath}.txt`;
       if (transcription && typeof transcription === "string") {
         await fs.promises.writeFile(txtPath, transcription, "utf8");
-        console.log(`📝 Saved transcription: ${txtPath}`);
+
       }
 
       // ✅ Build response object
@@ -101,18 +101,20 @@ export const listAudios = asyncHandler(async (req, res) => {
   const host = req.get("host");
   const BASE_UPLOAD_URL = `${protocol}://${host}/uploads`;
 
-  const files = fs.readdirSync(dir).map((filename) => {
-    const fileUrl = `${BASE_UPLOAD_URL}/${encodeURIComponent(filename)}`;
-    const filePath = path.join(dir, filename);
-    const stats = fs.statSync(filePath);
+  const files = fs.readdirSync(dir)
+    .filter((filename) => /\.(wav|mp3|ogg|flac)$/i.test(filename))
+    .map((filename) => {
+      const fileUrl = `${BASE_UPLOAD_URL}/${encodeURIComponent(filename)}`;
+      const filePath = path.join(dir, filename);
+      const stats = fs.statSync(filePath);
 
-    return {
-      filename,
-      publicUrl: fileUrl,
-      size: stats.size,
-      modified: stats.mtime,
-    };
-  });
+      return {
+        filename,
+        publicUrl: fileUrl,
+        size: stats.size,
+        modified: stats.mtime,
+      };
+    });
 
   res.status(200).json(files);
 });
@@ -129,9 +131,11 @@ export const deleteAudio = asyncHandler(async (req, res) => {
   }
 
   const uploadsDir = path.join(process.cwd(), "uploads");
-  const filePath = path.join(uploadsDir, file);
+  // Security: Prevent path traversal
+  const safeName = path.basename(file);
+  const filePath = path.join(uploadsDir, safeName);
 
-  console.log("🗑 Deleting file:", filePath);
+
 
   if (!fs.existsSync(filePath)) {
     res.status(404);

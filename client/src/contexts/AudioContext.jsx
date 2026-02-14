@@ -27,15 +27,21 @@ export const AudioProvider = ({ children }) => {
 
       setAudios(formatted);
 
-      if (formatted.length > 0 && !selectedAudio) {
-        setSelectedAudio(formatted[0]);
+      if (formatted.length > 0) {
+        setSelectedAudio((prev) => {
+          // If nothing is selected, or the previously selected audio no longer exists, select the first one
+          if (!prev || !formatted.find((a) => a.name === prev.name)) {
+            return formatted[0];
+          }
+          return prev;
+        });
       }
     } catch (err) {
       console.error("Error fetching audios:", err);
     } finally {
       setLoading(false);
     }
-  }, [selectedAudio]);
+  }, []);
 
   const addAudio = (fileName) => {
     if (!/\.(wav|mp3|ogg|flac)$/i.test(fileName)) return;

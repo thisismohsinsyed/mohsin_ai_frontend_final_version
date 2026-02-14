@@ -53,7 +53,7 @@ export default function ScriptUploadDialog({
         <DialogHeader>
           <DialogTitle>Upload call script</DialogTitle>
           <DialogDescription>
-            Attach a PDF (up to 8MB). We will summarize it with AI and auto-fill the initial sentence and system prompt for you.
+            Attach a script file (up to 8MB). We will summarize it with AI and auto-fill the initial sentence and system prompt for you.
           </DialogDescription>
         </DialogHeader>
 
@@ -71,7 +71,7 @@ export default function ScriptUploadDialog({
               required
             />
             <p className="text-xs text-muted-foreground">
-              Supports .txt, .md, and .docx. Keep under 8MB.
+              Supports .pdf, .txt, .md, and .docx. Keep under 8MB.
             </p>
           </div>
 

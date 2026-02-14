@@ -255,8 +255,6 @@ export default function VoiceAgentPage() {
 
     // 2. If it's a custom template, persist changes to backend
     const customTemplate = customTemplates.find((t) => t.id === selectedPersonaId);
-    console.log("[applySettings] selectedPersonaId:", selectedPersonaId);
-    console.log("[applySettings] customTemplate found:", !!customTemplate);
 
     if (customTemplate) {
       const toastId = toast.loading("Saving changes to database...");
@@ -264,7 +262,6 @@ export default function VoiceAgentPage() {
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
       try {
-        console.log("[applySettings] Sending POST to /api/templates/update for ID: " + selectedPersonaId);
         const response = await fetch(`/api/templates/update`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -277,14 +274,12 @@ export default function VoiceAgentPage() {
         });
 
         clearTimeout(timeoutId);
-        console.log("[applySettings] Response status:", response.status);
 
         if (!response.ok) {
           throw new Error("Failed to save template changes.");
         }
 
         const payload = await response.json();
-        console.log("[applySettings] Response payload received");
         const updated = normalizeTemplate(payload.template);
         if (updated) {
           setCustomTemplates((prev) =>
@@ -630,7 +625,7 @@ export default function VoiceAgentPage() {
                       onTemplateSelect={handleTemplateSelect}
                       selectedTemplateId={selectedPersonaId}
                       editingDisabled={listening}
-                      className="flex-1"
+                      className="flex-1 min-h-[600px]"
                       customTemplates={customTemplates}
                       onRequestUpload={() => setUploadDialogOpen(true)}
                       onEditTemplate={handleEditTemplateRequest}
