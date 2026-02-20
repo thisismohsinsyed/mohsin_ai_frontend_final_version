@@ -15,9 +15,7 @@ const MAX_TEXT_LENGTH = 12000;
 const MAX_SCRIPT_ADDENDUM_CHARS = 400;
 const MODEL_FALLBACK = process.env.SCRIPT_TEMPLATE_MODEL || "gemini-2.0-flash";
 
-const FIXED_INITIAL_SENTENCE = "Hello, I am Sarah from Summit Tax Relief. How can I assist you?";
-
-
+const FIXED_INITIAL_SENTENCE = "Hello, my name is Alicia your digital assistant. I'm here to ask you a few quick questions to see if you qualify for a free and thorough consultation.   May I ask who I am speaking with today?";
 
 const cachedReferencePrompt = referencePromptData?.systemPrompt?.toString().trim() || null;
 
@@ -31,14 +29,8 @@ async function loadReferencePrompt() {
 function composeSystemPrompt(referencePrompt, scriptAddendum) {
   const base = referencePrompt?.toString().trim() || "";
   const additional = scriptAddendum?.toString().trim();
-  if (!additional) {
-    return base;
-  }
-  const limited = additional.slice(0, MAX_SCRIPT_ADDENDUM_CHARS);
-  return `${base}
-
-SCRIPT CONTEXT
-${limited}`;
+  if (!additional) return base;
+  return `${base}\n\nADDITIONAL CONTEXT FROM SCRIPT:\n${additional.slice(0, MAX_SCRIPT_ADDENDUM_CHARS)}`;
 }
 
 async function runAiSummarizer(scriptText, referencePrompt) {
@@ -49,16 +41,14 @@ async function runAiSummarizer(scriptText, referencePrompt) {
 
   const truncated = scriptText.slice(0, MAX_TEXT_LENGTH);
   const trimmedReference = referencePrompt?.toString().trim() || "";
-  const prompt = `You are customizing the Summit Tax Relief four-stage playbook for a specific caller script.
+  const prompt = `You are an expert AI assistant builder for Summit Tax Relief. The agent, Alicia, follows a specific five-step qualification flow.
 
-REFERENCE PROMPT (fixed baseline; do not rewrite it):
+REFERENCE FLOW (fixed baseline):
 ${trimmedReference}
 
-Using only the unique adjustments from the caller script below, return JSON with:
-- "initialSentence": one empathetic sentence (<= 20 words) to open Stage S1.
-- "scriptAddendum": <= 120 words describing tone, risks, objections, or data capture priorities specific to this script. Use an empty string if there are no changes.
-
-Do NOT restate the reference prompt; capture only the extra guidance needed.
+Your task is to analyze the provided CALLER SCRIPT and extract ONLY specific nuances (tone, niche tax problems, specific urgency cues) that should be added to Alicia's context. return JSON with:
+- "initialSentence": the fixed Alicia greeting: "Hello, my name is Alicia your digital assistant. I'm here to ask you a few quick questions to see if you qualify for a free and thorough consultation. May I ask who I am speaking with today?"
+- "scriptAddendum": <= 100 words of specific instructions for Alicia based on the script (e.g., "The caller is often frustrated about wage garnishments, prioritize empathy on that.")
 
 CALLER SCRIPT:
 """${truncated}"""`;
@@ -90,8 +80,6 @@ CALLER SCRIPT:
   };
 }
 
-
-
 function buildMetadataFallback({ notes, templateLabel, fileName }) {
   const parts = [];
   if (templateLabel) parts.push("Template label: " + templateLabel + ".");
@@ -104,16 +92,10 @@ function buildMetadataFallback({ notes, templateLabel, fileName }) {
 }
 
 function buildFallback(scriptText, referencePrompt) {
-
   const normalized = scriptText.replace(/\s+/g, " ").trim();
-
   const fallbackAddendum = "Align to this script summary: " + normalized.slice(0, 600) + "... Keep responses confident, procedural, and compliant.";
-
   return { initialSentence: FIXED_INITIAL_SENTENCE, systemPrompt: composeSystemPrompt(referencePrompt, fallbackAddendum) };
-
 }
-
-
 
 async function runAiSafely(scriptText, referencePrompt) {
   try {
@@ -127,25 +109,17 @@ async function runAiSafely(scriptText, referencePrompt) {
 
 async function extractTextWithPdfJs(buffer) {
   try {
-    // Dynamic import to avoid build-time issues if worker is missing
     const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-
-    // Disable worker for server-side usage
     if (pdfjsLib.GlobalWorkerOptions) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = undefined;
     }
-
-    // Load the document with strict error handling
     const loadingTask = pdfjsLib.getDocument({
       data: buffer,
       verbosity: 0,
       stopAtErrors: true
     });
-
     const pdf = await loadingTask.promise;
     const chunks = [];
-
-    // Extract text from each page
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
       try {
         const page = await pdf.getPage(pageNumber);
@@ -156,15 +130,11 @@ async function extractTextWithPdfJs(buffer) {
         console.warn(`Failed to extract text from page ${pageNumber}`, pageError);
       }
     }
-
-    // Clean up
     if (pdf.cleanup) await pdf.cleanup();
     if (pdf.destroy) await pdf.destroy();
-
     return chunks.join("\n").trim();
   } catch (error) {
     console.error("PDF.js critical failure:", error);
-    // Do not throw, return empty string to allow fallback to metadata
     return "";
   }
 }
@@ -224,13 +194,10 @@ export async function POST(req) {
         console.error("DOCX extraction failed", err);
       }
     } else {
-      // txt, md
       scriptText = buffer.toString("utf-8");
     }
 
-    if (scriptText) {
-      scriptText = scriptText.trim();
-    }
+    if (scriptText) scriptText = scriptText.trim();
 
     if (!scriptText) {
       console.log("No text extracted from file, using metadata fallback.");
@@ -253,10 +220,9 @@ export async function POST(req) {
       data: {
         label: templateName || "Uploaded Script",
         description: notes || ("Generated from " + (file.name || "uploaded file")),
-
         notes: notes || null,
         sourceFileName: file.name || null,
-        initialSentence: aiResult.initialSentence,
+        initialSentence: FIXED_INITIAL_SENTENCE,
         systemPrompt: aiResult.systemPrompt,
       },
     });
@@ -268,7 +234,3 @@ export async function POST(req) {
     return NextResponse.json({ error: error.message || "Failed to process script." }, { status: 500 });
   }
 }
-
-
-
-

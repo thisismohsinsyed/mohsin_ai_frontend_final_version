@@ -75,7 +75,7 @@ nextApp.prepare().then(() => {
 
     const audioUrl = query.audioUrl ? decodeURIComponent(query.audioUrl) : null;
     const systemPrompt = query.systemPrompt ? decodeURIComponent(query.systemPrompt) : null;
-    const initialSentence = query.initialSentence ? decodeURIComponent(query.initialSentence) : null;
+    const initialSentence = "Hello, my name is Alicia your digital assistant. I'm here to ask you a few quick questions to see if you qualify for a free and thorough consultation.   May I ask who I am speaking with today?";
 
 
     const promptSettings = { systemPrompt, initialSentence };
