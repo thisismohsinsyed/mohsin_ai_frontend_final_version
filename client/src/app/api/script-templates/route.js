@@ -46,9 +46,17 @@ async function runAiSummarizer(scriptText, referencePrompt) {
 REFERENCE FLOW (fixed baseline):
 ${trimmedReference}
 
-Your task is to analyze the provided CALLER SCRIPT and extract ONLY specific nuances (tone, niche tax problems, specific urgency cues) that should be added to Alicia's context. return JSON with:
-- "initialSentence": the fixed Alicia greeting: "Hello, my name is Alicia your digital assistant. I'm here to ask you a few quick questions to see if you qualify for a free and thorough consultation. May I ask who I am speaking with today?"
-- "scriptAddendum": <= 100 words of specific instructions for Alicia based on the script (e.g., "The caller is often frustrated about wage garnishments, prioritize empathy on that."). IMPORTANT: Use written-out words for all numbers (e.g., "ten thousand" instead of "10,000" or "$10k").
+Your task is to analyze the provided CALLER SCRIPT and update Alicia's system prompt. 
+IMPORTANT: You MUST maintain the EXACT wordings from the script for any dialogue Alicia speaks. 
+
+TTS OPTIMIZATION RULES:
+1. Use written-out words for all numbers (e.g., "ten thousand" instead of "10,000").
+2. Use commas and periods strategically to create natural pauses for the TTS engine.
+3. Avoid abbreviations (e.g., use "IRS" instead of "I.R.S." if the TTS handles it better as a word, or "Internal Revenue Service" if it sounds better).
+
+Return JSON with:
+- "initialSentence": Always use this EXACT fixed Alicia greeting: "${FIXED_INITIAL_SENTENCE}"
+- "scriptAddendum": A detailed set of instructions for Alicia that incorporates the EXACT wordings and logic from the CALLER SCRIPT provided below. Ensure it specifies exactly what to say for each stage based on the script.
 
 CALLER SCRIPT:
 """${truncated}"""`;
@@ -57,8 +65,8 @@ CALLER SCRIPT:
   const { text: aiText } = await generateText({
     model,
     prompt,
-    temperature: 0.4,
-    maxOutputTokens: 500,
+    temperature: 0.1,
+    maxOutputTokens: 1000,
   });
 
   const rawContent = aiText || "";
@@ -68,15 +76,16 @@ CALLER SCRIPT:
   }
 
   const data = JSON.parse(jsonMatch[0]);
-  const initialSentence = data.initialSentence?.toString().trim();
+  const initialSentence = data.initialSentence?.toString().trim() || FIXED_INITIAL_SENTENCE;
   const scriptAddendum = data.scriptAddendum?.toString().trim() || data.scriptContext?.toString().trim();
-  if (!initialSentence) {
-    throw new Error("AI response missing fields");
+
+  if (!scriptAddendum) {
+    throw new Error("AI response missing scriptAddendum");
   }
 
   return {
     initialSentence,
-    systemPrompt: composeSystemPrompt(referencePrompt, scriptAddendum || ""),
+    systemPrompt: composeSystemPrompt(referencePrompt, scriptAddendum),
   };
 }
 
